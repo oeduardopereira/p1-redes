@@ -20,14 +20,28 @@ def dados_recebidos(conexao, dados):
     # add o que foi recebido no buffer da conn
     conexao.buffer += dados
     while b'\r\n' in conexao.buffer: 
-        # enquanto ainda estiver '\r\n' no buffer
+        # enquanto ainda estiver '\r\n' no buffer,
         # ele separa a msg fragmentada, ate a primeira ocorrencia, 
         mensagem, conexao.buffer = conexao.buffer.split(b'\r\n', 1)
 
         if mensagem.startswith(b'PING'):
             partes = mensagem.split(b' ', 1)
             conexao.enviar(b':server PONG server :' + partes[1] + b'\r\n')
-    
+        
+        elif mensagem.startswith(b'NICK'):
+            _, nick = mensagem.split(b' ', 1)
+            
+            if not validar_nome(nick):
+                conexao.enviar(b':server 432 '+ conexao.nick + b' ' + nick + b' :Erroneous nickname\r\n')
+            else:
+                old_nick = conexao.nick
+                conexao.nick = nick
+                if old_nick == b'*':
+                    conexao.enviar(b':server 001 ' + conexao.nick + b' :Welcome\r\n')
+                    conexao.enviar(b':server 422 ' + conexao.nick + b' :MOTD File is missing\r\n')
+                else:
+                    conexao.enviar(b':' + old_nick + b' NICK ' + nick + b'\r\n')
+                
     print(conexao, dados)
 
 
