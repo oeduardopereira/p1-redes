@@ -4,6 +4,7 @@ from tcp import Servidor
 import re
 
 users = {}
+channels = {}
 
 def validar_nome(nome):
     return re.match(br'^[a-zA-Z][a-zA-Z0-9_-]*$', nome) is not None
@@ -12,7 +13,6 @@ def validar_nome(nome):
 def sair(conexao):
     print(conexao, 'conexão fechada')
     conexao.fechar()
-
 
 def dados_recebidos(conexao, dados):
     if dados == b'':
@@ -50,13 +50,40 @@ def dados_recebidos(conexao, dados):
                     del users[old_nick.lower()]
                     conexao.enviar(b':' + old_nick + b' NICK ' + nick + b'\r\n')
         
-        if mensagem.startswith(b'PRIVMSG'):
+        elif mensagem.startswith(b'PRIVMSG'):
             _, dest, msg = mensagem.split(b' ', 2)
+            dest_lower = dest.lower()
             
-            if dest.lower() in users:
-                conn_dest = users[dest.lower()]
+            if dest.startswith(b'#'):
+                if dest_lower in channels:
+                    for user in channels[dest_lower]:
+                        if user != conexao:
+                            user.enviar(b':' + conexao.nick + b' PRIVMSG ' + dest + b' ' + msg + b'\r\n')
+            
+            if dest_lower in users:
+                conn_dest = users[dest_lower]
                 conn_dest.enviar(b':' + conexao.nick + b' PRIVMSG ' + dest + b' ' + msg + b'\r\n')
+        
+        elif mensagem.startswith(b'JOIN'):
+            _, channel = mensagem.split(b' ', 1)
+            
+            if not channel.startswith(b'#') or not validar_nome(channel[1:]):
+                conexao.enviar(b':server 403 ' + channel + b' :No such channel\r\n')
+            else:
+                channel_lower = channel.lower()
                 
+                # verifica se o canal esta na lista de canais, caso nao, adiciona-o
+                if not channel_lower in channels:
+                    channels[channel_lower] = []
+                    
+                # verifica se o userX esta na lista de users do canal, caso nao, adiciona-o
+                if not conexao in channels[channel_lower]:
+                    channels[channel_lower].append(conexao)
+                
+                # envia para todos os users do canal que o userX entrou
+                for user in channels[channel_lower]:
+                    user.enviar(b':' + conexao.nick + b' JOIN :' + channel + b'\r\n')
+                    
     print(conexao, dados)
 
 
