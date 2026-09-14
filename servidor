@@ -3,6 +3,7 @@ import asyncio
 from tcp import Servidor
 import re
 
+users = {}
 
 def validar_nome(nome):
     return re.match(br'^[a-zA-Z][a-zA-Z0-9_-]*$', nome) is not None
@@ -30,16 +31,23 @@ def dados_recebidos(conexao, dados):
         
         elif mensagem.startswith(b'NICK'):
             _, nick = mensagem.split(b' ', 1)
+            nick_lower = nick.lower()
             
             if not validar_nome(nick):
                 conexao.enviar(b':server 432 '+ conexao.nick + b' ' + nick + b' :Erroneous nickname\r\n')
+           
+            elif nick_lower in users:
+                conexao.enviar(b':server 433 '+ conexao.nick + b' ' + nick + b' :Nickname is already in use\r\n')  
             else:
                 old_nick = conexao.nick
                 conexao.nick = nick
+                users[nick_lower] = conexao
+                
                 if old_nick == b'*':
                     conexao.enviar(b':server 001 ' + conexao.nick + b' :Welcome\r\n')
                     conexao.enviar(b':server 422 ' + conexao.nick + b' :MOTD File is missing\r\n')
                 else:
+                    del users[old_nick.lower()]
                     conexao.enviar(b':' + old_nick + b' NICK ' + nick + b'\r\n')
                 
     print(conexao, dados)
