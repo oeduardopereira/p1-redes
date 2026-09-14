@@ -11,7 +11,26 @@ def validar_nome(nome):
 
 
 def sair(conexao):
+    users_to_send = set()
+    
+    # Busca todas as conexoes em um canal
+    for channel in channels.values():
+        
+        # Se a conexao que vai sair estiver no canal, entra na condicao
+        if conexao in channel:
+            
+            # Itera as conexoes presentes no canal e adciona cada uma
+            # em um conjunto para que nao tenha repeticoes
+            for conn in channel:
+                if conexao != conn:
+                    users_to_send.add(conn)
+            channel.remove(conexao)   
+
+    for user in users_to_send:
+        user.enviar(b':' + conexao.nick + b' QUIT :Connection closed\r\n')
+
     print(conexao, 'conexão fechada')
+    del users[conexao.nick.lower()]
     conexao.fechar()
 
 def dados_recebidos(conexao, dados):
@@ -86,14 +105,14 @@ def dados_recebidos(conexao, dados):
         
         elif mensagem.startswith(b'PART'):
             _, part = mensagem.split(b' ', 1)
-            channel = part.split(b' ', 1)[0]
+            channel = part.split(b' ', 1)[0] 
             channel_lower = channel.lower()
             
             if channel_lower in channels and conexao in channels[channel_lower]:
                 for user in channels[channel_lower]:
                     user.enviar(b':' + conexao.nick + b' PART ' + channel + b'\r\n')
-                channels[channel_lower].remove(conexao)
-                        
+                channels[channel_lower].remove(conexao)       
+                     
     print(conexao, dados)
 
 
