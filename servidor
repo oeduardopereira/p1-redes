@@ -16,25 +16,27 @@ def sair(conexao):
 def dados_recebidos(conexao, dados):
     if dados == b'':
         return sair(conexao)
-    mensagem = dados.replace(b'\r\n', b'')
     
-    if mensagem.startswith(b'PING'):
-        partes = mensagem.split(b' ', 1)
-        conexao.enviar(b':server PONG server :' + partes[1] + b'\r\n')
+    # add o que foi recebido no buffer da conn
+    conexao.buffer += dados
+    while b'\r\n' in conexao.buffer: 
+        # enquanto ainda estiver '\r\n' no buffer
+        # ele separa a msg fragmentada, ate a primeira ocorrencia, 
+        mensagem, conexao.buffer = conexao.buffer.split(b'\r\n', 1)
+
+        if mensagem.startswith(b'PING'):
+            partes = mensagem.split(b' ', 1)
+            conexao.enviar(b':server PONG server :' + partes[1] + b'\r\n')
+    
     print(conexao, dados)
 
 
 def conexao_aceita(conexao):
     print(conexao, 'nova conexão')
-
-    # Note que, no Python, atributos NÃO precisam ser previamente declarados na classe!
-    # Se precisar, esta função é o melhor local para adicionar novos atributos ao objeto conexao.
-    #
-    # Por exemplo, para armazenar o nick do usuário:
     conexao.nick = b'*'
-
-    # Fique à vontade para adicionar mais atributos, se necessário.
-
+    
+    # buffer para salvar as mensagens/residuos
+    conexao.buffer = b''
     conexao.registrar_recebedor(dados_recebidos)
 
 
