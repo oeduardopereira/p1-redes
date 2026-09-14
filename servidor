@@ -30,7 +30,9 @@ def sair(conexao):
         user.enviar(b':' + conexao.nick + b' QUIT :Connection closed\r\n')
 
     print(conexao, 'conexão fechada')
-    del users[conexao.nick.lower()]
+    nick_lower = conexao.nick.lower()
+    if nick_lower in users:
+        del users[nick_lower]
     conexao.fechar()
 
 def dados_recebidos(conexao, dados):
@@ -99,10 +101,37 @@ def dados_recebidos(conexao, dados):
                 if not conexao in channels[channel_lower]:
                     channels[channel_lower].append(conexao)
                 
+                users_in_channel = []
+                
                 # envia para todos os users do canal que o userX entrou
                 for user in channels[channel_lower]:
+                    users_in_channel.append(user.nick)
                     user.enviar(b':' + conexao.nick + b' JOIN :' + channel + b'\r\n')
-        
+
+                users_in_channel.sort()
+                
+                prefix = b':server 353 ' + conexao.nick + b' = ' + channel + b' :'
+                curr_size = 0
+                nicks_line = []
+                available_size = 510 - len(prefix)                
+                
+                for nick in users_in_channel:
+                    if curr_size + len(nick) + 1 > available_size and nicks_line:
+                        msg = b" ".join(nicks_line)
+                        conexao.enviar(prefix + msg + b'\r\n')
+                       
+                        curr_size = 0
+                        nicks_line = []
+                    
+                    nicks_line.append(nick)
+                    curr_size += len(nick) + 1
+                
+                if nicks_line:
+                    msg = b" ".join(nicks_line)
+                    conexao.enviar(prefix + msg + b'\r\n')
+                    
+                conexao.enviar(b':server 366 ' + conexao.nick + b' ' + channel + b' :End of /NAMES list.\r\n')
+                
         elif mensagem.startswith(b'PART'):
             _, part = mensagem.split(b' ', 1)
             channel = part.split(b' ', 1)[0] 
