@@ -16,6 +16,11 @@ def sair(conexao):
 def dados_recebidos(conexao, dados):
     if dados == b'':
         return sair(conexao)
+    mensagem = dados.replace(b'\r\n', b'')
+    
+    if mensagem.startswith(b'PING'):
+        partes = mensagem.split(b' ', 1)
+        conexao.enviar(b':server PONG server :' + partes[1] + b'\r\n')
     print(conexao, dados)
 
 
