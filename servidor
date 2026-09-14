@@ -83,7 +83,17 @@ def dados_recebidos(conexao, dados):
                 # envia para todos os users do canal que o userX entrou
                 for user in channels[channel_lower]:
                     user.enviar(b':' + conexao.nick + b' JOIN :' + channel + b'\r\n')
-                    
+        
+        elif mensagem.startswith(b'PART'):
+            _, part = mensagem.split(b' ', 1)
+            channel = part.split(b' ', 1)[0]
+            channel_lower = channel.lower()
+            
+            if channel_lower in channels and conexao in channels[channel_lower]:
+                for user in channels[channel_lower]:
+                    user.enviar(b':' + conexao.nick + b' PART ' + channel + b'\r\n')
+                channels[channel_lower].remove(conexao)
+                        
     print(conexao, dados)
 
 
