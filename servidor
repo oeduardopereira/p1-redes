@@ -49,6 +49,13 @@ def dados_recebidos(conexao, dados):
                 else:
                     del users[old_nick.lower()]
                     conexao.enviar(b':' + old_nick + b' NICK ' + nick + b'\r\n')
+        
+        if mensagem.startswith(b'PRIVMSG'):
+            _, dest, msg = mensagem.split(b' ', 2)
+            
+            if dest.lower() in users:
+                conn_dest = users[dest.lower()]
+                conn_dest.enviar(b':' + conexao.nick + b' PRIVMSG ' + dest + b' ' + msg + b'\r\n')
                 
     print(conexao, dados)
 
